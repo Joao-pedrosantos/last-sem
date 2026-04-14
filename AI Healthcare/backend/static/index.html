@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PneumoniaDetect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .drop-zone { transition: border-color 0.15s, background-color 0.15s; }
+    .drop-zone.drag-over { border-color: #2563eb; background-color: #eff6ff; }
+    .prob-bar-pneumonia { background-color: #dc2626; transition: width 0.6s ease; }
+    .prob-bar-normal    { background-color: #16a34a; transition: width 0.6s ease; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div class="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-md bg-blue-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 3C6.5 3 4 5.5 4 9c0 2.5 1 4.5 2 6l3 5h2l3-5c1-1.5 2-3.5 2-6 0-3.5-2.5-6-5-6z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 3c2.5 0 5 2.5 5 6"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-slate-900 leading-tight">PneumoniaDetect</p>
+          <p class="text-xs text-slate-400">DenseNet-121 · Chest X-ray triage</p>
+        </div>
+      </div>
+      <div id="statusBadge" class="flex items-center gap-1.5 text-xs text-slate-500">
+        <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-300"></span>
+        <span id="statusText">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-6 py-10 space-y-6">
+
+    <!-- Upload card -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+      <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-5">Upload X-ray</h2>
+
+      <!-- Drop zone -->
+      <div id="dropZone"
+        class="drop-zone border-2 border-dashed border-slate-200 rounded-lg p-10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-400 hover:bg-slate-50">
+        <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 0L8 8m4-4l4 4"/>
+        </svg>
+        <p class="text-sm text-slate-500">Drag &amp; drop your X-ray here, or <span class="text-blue-600 font-medium">browse</span></p>
+        <p class="text-xs text-slate-400">Supports DICOM (.dcm), PNG, JPEG</p>
+      </div>
+
+      <!-- File info -->
+      <div id="fileInfo" class="hidden mt-4 flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <svg class="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v15a2 2 0 01-2 2z"/>
+          </svg>
+          <span id="fileName" class="text-sm font-medium text-slate-700 truncate"></span>
+          <span id="fileSize" class="text-xs text-slate-400 flex-shrink-0"></span>
+        </div>
+        <button id="clearBtn" class="text-xs text-slate-400 hover:text-red-500 flex-shrink-0 ml-4">Remove</button>
+      </div>
+
+      <!-- Preview (non-DICOM images) -->
+      <div id="previewContainer" class="hidden mt-4">
+        <img id="preview" class="rounded-lg max-h-56 mx-auto object-contain border border-slate-200" alt="X-ray preview" />
+      </div>
+
+      <!-- Analyze button -->
+      <button id="analyzeBtn"
+        class="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+        disabled>
+        Analyze X-ray
+      </button>
+    </div>
+
+    <!-- Results card (hidden until a result arrives) -->
+    <div id="resultsCard" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-8 pt-7 pb-6">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-5">Result</h2>
+
+        <!-- Mock banner -->
+        <div id="mockBanner"
+          class="hidden mb-5 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-4 py-2.5">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+          </svg>
+          <span>Placeholder prediction — model weights not loaded yet. Results are for layout testing only.</span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-start gap-6">
+
+          <!-- Left: prediction details -->
+          <div class="flex-1 space-y-4">
+            <!-- Badge -->
+            <div id="predictionBadge"
+              class="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg border">
+              <span id="predictionDot" class="w-2.5 h-2.5 rounded-full"></span>
+              <span id="predictionLabel">—</span>
+            </div>
+
+            <!-- Probability bar -->
+            <div>
+              <div class="flex justify-between text-xs text-slate-500 mb-1.5">
+                <span>Confidence</span>
+                <span id="probValue" class="font-medium text-slate-700"></span>
+              </div>
+              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div id="probBar" class="h-full rounded-full" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Threshold -->
+            <p id="thresholdNote" class="text-xs text-slate-400"></p>
+          </div>
+
+          <!-- Right: Grad-CAM -->
+          <div id="gradcamSection" class="hidden sm:w-48">
+            <p class="text-xs text-slate-500 mb-2 font-medium">Grad-CAM heatmap</p>
+            <img id="gradcamImg" class="rounded-lg border border-slate-200 w-full object-cover" alt="Grad-CAM" />
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Error card -->
+    <div id="errorCard" class="hidden bg-red-50 border border-red-200 rounded-xl px-6 py-4 text-sm text-red-700">
+      <span id="errorMsg"></span>
+    </div>
+
+  </main>
+
+  <script>
+    // ---- State ----
+    let selectedFile = null;
+
+    // ---- Elements ----
+    const dropZone      = document.getElementById('dropZone');
+    const fileInfo      = document.getElementById('fileInfo');
+    const fileName      = document.getElementById('fileName');
+    const fileSize      = document.getElementById('fileSize');
+    const clearBtn      = document.getElementById('clearBtn');
+    const previewCont   = document.getElementById('previewContainer');
+    const preview       = document.getElementById('preview');
+    const analyzeBtn    = document.getElementById('analyzeBtn');
+    const resultsCard   = document.getElementById('resultsCard');
+    const mockBanner    = document.getElementById('mockBanner');
+    const predBadge     = document.getElementById('predictionBadge');
+    const predDot       = document.getElementById('predictionDot');
+    const predLabel     = document.getElementById('predictionLabel');
+    const probValue     = document.getElementById('probValue');
+    const probBar       = document.getElementById('probBar');
+    const threshNote    = document.getElementById('thresholdNote');
+    const gradcamSec    = document.getElementById('gradcamSection');
+    const gradcamImg    = document.getElementById('gradcamImg');
+    const errorCard     = document.getElementById('errorCard');
+    const errorMsg      = document.getElementById('errorMsg');
+    const statusDot     = document.getElementById('statusDot');
+    const statusText    = document.getElementById('statusText');
+
+    // ---- Health check on load ----
+    (async () => {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        statusDot.className  = 'w-2 h-2 rounded-full bg-green-500';
+        statusText.textContent = data.weights_loaded ? 'Ready' : 'Mock mode';
+      } catch {
+        statusDot.className  = 'w-2 h-2 rounded-full bg-red-400';
+        statusText.textContent = 'API offline';
+      }
+    })();
+
+    // ---- Drag & drop ----
+    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+
+    dropZone.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.dcm,.dicom,.png,.jpg,.jpeg';
+      input.onchange = e => { if (e.target.files[0]) setFile(e.target.files[0]); };
+      input.click();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      selectedFile = null;
+      fileInfo.classList.add('hidden');
+      previewCont.classList.add('hidden');
+      resultsCard.classList.add('hidden');
+      errorCard.classList.add('hidden');
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = 'Analyze X-ray';
+      preview.src = '';
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = formatBytes(file.size);
+      fileInfo.classList.remove('hidden');
+      resultsCard.classList.add('hidden');
+      errorCard.classList.add('hidden');
+      analyzeBtn.disabled = false;
+
+      // Image preview (skip for DICOM)
+      const isDicom = /\.(dcm|dicom|ima)$/i.test(file.name);
+      if (!isDicom) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          preview.src = e.target.result;
+          previewCont.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewCont.classList.add('hidden');
+      }
+    }
+
+    // ---- Analyze ----
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = 'Analyzing…';
+      errorCard.classList.add('hidden');
+      resultsCard.classList.add('hidden');
+
+      const form = new FormData();
+      form.append('file', selectedFile);
+
+      try {
+        const res = await fetch('/predict?include_gradcam=true', { method: 'POST', body: form });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || res.statusText);
+        }
+        displayResults(await res.json());
+      } catch (err) {
+        errorMsg.textContent = 'Error: ' + err.message;
+        errorCard.classList.remove('hidden');
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Analyze X-ray';
+      }
+    });
+
+    // ---- Display results ----
+    function displayResults(data) {
+      const isPneumonia = data.prediction === 'pneumonia';
+      const pct = Math.round(data.probability * 100);
+
+      // Badge
+      if (isPneumonia) {
+        predBadge.className = 'inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg border bg-red-50 text-red-700 border-red-200';
+        predDot.className   = 'w-2.5 h-2.5 rounded-full bg-red-500';
+      } else {
+        predBadge.className = 'inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg border bg-green-50 text-green-700 border-green-200';
+        predDot.className   = 'w-2.5 h-2.5 rounded-full bg-green-500';
+      }
+      predLabel.textContent = isPneumonia ? 'Pneumonia detected' : 'No pneumonia detected';
+
+      // Probability
+      probValue.textContent = pct + '%';
+      probBar.style.width   = pct + '%';
+      probBar.className     = 'h-full rounded-full ' + (isPneumonia ? 'prob-bar-pneumonia' : 'prob-bar-normal');
+
+      // Threshold note
+      threshNote.textContent = `Operating threshold: ${(data.threshold * 100).toFixed(0)}%`;
+
+      // Mock banner
+      data.weights_loaded ? mockBanner.classList.add('hidden') : mockBanner.classList.remove('hidden');
+
+      // Grad-CAM
+      if (data.gradcam) {
+        gradcamImg.src = 'data:image/png;base64,' + data.gradcam;
+        gradcamSec.classList.remove('hidden');
+      } else {
+        gradcamSec.classList.add('hidden');
+      }
+
+      resultsCard.classList.remove('hidden');
+      resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024)        return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+  </script>
+</body>
+</html>

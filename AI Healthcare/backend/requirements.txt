@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+torch
+torchvision
+pydicom
+albumentations
+Pillow
+grad-cam
+numpy
+timm
