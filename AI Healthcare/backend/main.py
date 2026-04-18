@@ -62,6 +62,8 @@ model, weights_loaded = load_model(MODEL_PATH, DEVICE)
 DICOM_EXTENSIONS = {".dcm", ".dicom", ".ima"}
 DISPLAY_SIZE = 512  # all responses standardize on a 512x512 canvas
 BBOX_THRESHOLD = 0.5  # fraction of heatmap max used to cut the activation region
+BORDER_CROP_FRACTION = 0.06  # trim N% off each side to remove Dx/Sin markers and edge artefacts
+BBOX_BORDER_SUPPRESSION = 0.08  # zero this fraction of the heatmap's border before bbox extraction
 
 
 def _is_dicom(filename: str) -> bool:
@@ -73,6 +75,23 @@ def _array_to_base64_png(array: np.ndarray) -> str:
     buffer = io.BytesIO()
     Image.fromarray(array).save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
+
+
+def _crop_borders(image_array: np.ndarray, fraction: float = BORDER_CROP_FRACTION) -> np.ndarray:
+    """
+    Trim a fraction of pixels from each side. Chest X-rays routinely carry
+    laterality markers ("Dx"/"Sin", arrows, burn-in text) and black padding in
+    the corners — these are spurious features the model can latch onto. Cropping
+    them out before inference keeps the model focused on the lung fields.
+    """
+    if fraction <= 0:
+        return image_array
+    h, w = image_array.shape[:2]
+    dx = int(w * fraction)
+    dy = int(h * fraction)
+    if dx * 2 >= w or dy * 2 >= h:
+        return image_array
+    return image_array[dy : h - dy, dx : w - dx]
 
 
 def _display_image(image_array: np.ndarray) -> np.ndarray:
@@ -99,6 +118,16 @@ def _bbox_from_heatmap(heatmap: np.ndarray) -> dict | None:
             (DISPLAY_SIZE, DISPLAY_SIZE)
         )
         heatmap = np.array(pil).astype(np.float32) / 255.0
+
+    # Suppress activations near the image border — even after cropping the
+    # input, Grad-CAM on CNN features can spill into the edge receptive field.
+    if BBOX_BORDER_SUPPRESSION > 0:
+        b = int(DISPLAY_SIZE * BBOX_BORDER_SUPPRESSION)
+        heatmap = heatmap.copy()
+        heatmap[:b, :] = 0
+        heatmap[-b:, :] = 0
+        heatmap[:, :b] = 0
+        heatmap[:, -b:] = 0
 
     peak = float(heatmap.max())
     if peak <= 0:
@@ -230,6 +259,11 @@ async def predict(
             image_array = load_image(file_bytes)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Could not read image: {exc}") from exc
+
+    # Crop the border markers/padding out before anything else so both the
+    # model and the displayed image see the same field of view and bbox
+    # coordinates map 1:1 to what the user sees.
+    image_array = _crop_borders(image_array)
 
     display_rgb = _display_image(image_array)
     tensor = preprocess(image_array).to(DEVICE)
