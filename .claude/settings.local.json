@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast; ast.parse\\(open\\('main.py',encoding='utf-8'\\).read\\(\\)\\); print\\('main.py OK'\\)\")",
+      "Bash(python -c \"import torch, fastapi, albumentations, pydicom; print\\('deps ok; torch', torch.__version__\\)\")",
+      "Bash(python -c \"import torch; print\\('torch', torch.__version__\\)\")",
+      "Bash(python -)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('main.py',encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(python -c \"import json,sys; nb=json.load\\(open\\('AI Healthcare/project.ipynb',encoding='utf-8'\\)\\); cells=nb['cells']; print\\('TOTAL CELLS:',len\\(cells\\)\\); [print\\(f'\\\\n=== CELL {i} [{c[\\\\\"cell_type\\\\\"]}] ===\\\\n'+''.join\\(c['source']\\)[:600]\\) for i,c in enumerate\\(cells\\)]\")",
+      "Bash(python -c ' *)",
+      "Bash(python _patch_notebook.py)"
+    ]
+  }
+}
