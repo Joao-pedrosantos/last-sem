@@ -9,3 +9,7 @@ Pillow
 grad-cam
 numpy
 timm
+opencv-python-headless
+scipy
+scikit-learn
+pytest
