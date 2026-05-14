@@ -1,10 +1,10 @@
+# Serving + training deps. PyTorch is installed separately by setup_home.sh
+# to pick the right CUDA wheel for the host GPU (Blackwell needs cu124+).
 fastapi
 uvicorn[standard]
 python-multipart
-torch
-torchvision
 pydicom
-albumentations
+albumentations>=2.0
 Pillow
 grad-cam
 numpy
@@ -13,3 +13,11 @@ opencv-python-headless
 scipy
 scikit-learn
 pytest
+# Notebook + training-side deps
+pandas
+matplotlib
+seaborn
+jupyter
+notebook
+nbformat
+ipywidgets

@@ -1,36 +1,35 @@
 #!/usr/bin/env bash
-set -e
+# Start the FastAPI backend.
+# The venv must already exist — run ./setup_home.sh once before this script.
+set -euo pipefail
 
-BACKEND_DIR="$(cd "$(dirname "$0")/backend" && pwd)"
-VENV_DIR="$BACKEND_DIR/venv"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+BACKEND_DIR="$HERE/backend"
 PORT="${PORT:-8000}"
+
+# Prefer the project-level venv created by setup_home.sh; fall back to the
+# legacy backend/venv layout for backwards compatibility.
+if   [ -d "$HERE/venv" ]; then         VENV_DIR="$HERE/venv"
+elif [ -d "$BACKEND_DIR/venv" ]; then  VENV_DIR="$BACKEND_DIR/venv"
+else
+  echo "No venv found. Run ./setup_home.sh first." >&2
+  exit 1
+fi
 
 echo ""
 echo "  PneumoniaDetect"
 echo "  ---------------"
+echo "  Venv:  $VENV_DIR"
+echo "  Port:  $PORT"
+echo ""
 
-# Create venv if it doesn't exist
-if [ ! -d "$VENV_DIR" ]; then
-  echo ""
-  echo "  Creating virtual environment..."
-  python3 -m venv "$VENV_DIR"
-fi
-
-# Activate venv
+# shellcheck disable=SC1090
 source "$VENV_DIR/bin/activate"
 
-# Install / sync dependencies
-echo ""
-echo "  Checking dependencies..."
-pip install -q -r "$BACKEND_DIR/requirements.txt"
-
-# Start the server
-echo ""
 echo "  Starting server on http://localhost:$PORT"
-echo "  API docs at  http://localhost:$PORT/docs"
-echo ""
+echo "  API docs at        http://localhost:$PORT/docs"
 echo "  Press Ctrl+C to stop."
 echo ""
 
 cd "$BACKEND_DIR"
-uvicorn main:app --host 0.0.0.0 --port "$PORT" --reload
+exec uvicorn main:app --host 0.0.0.0 --port "$PORT" --reload
