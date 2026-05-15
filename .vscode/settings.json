@@ -1,3 +1,4 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder}/AI Healthcare/backend/venv/bin/python"
+  "python.defaultInterpreterPath": "${workspaceFolder}/AI Healthcare/venv/Scripts/python.exe",
+  "python.venvFolders": ["AI Healthcare"]
 }

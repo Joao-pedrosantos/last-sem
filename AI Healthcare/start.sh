@@ -23,8 +23,14 @@ echo "  Venv:  $VENV_DIR"
 echo "  Port:  $PORT"
 echo ""
 
+# On Windows (Git Bash/MSYS) the venv layout is Scripts/, on Linux/Mac it's bin/
+if [[ -f "$VENV_DIR/Scripts/activate" ]]; then
+  ACTIVATE="$VENV_DIR/Scripts/activate"
+else
+  ACTIVATE="$VENV_DIR/bin/activate"
+fi
 # shellcheck disable=SC1090
-source "$VENV_DIR/bin/activate"
+source "$ACTIVATE"
 
 echo "  Starting server on http://localhost:$PORT"
 echo "  API docs at        http://localhost:$PORT/docs"

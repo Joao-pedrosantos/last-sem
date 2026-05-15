@@ -26,9 +26,13 @@ elif command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
   DRV_CUDA="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | awk -F. '{print $1}')"
   GPU_NAME="$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)"
   echo "  Detected GPU: $GPU_NAME (driver major $DRV_CUDA)"
-  # RTX 50-series / Blackwell needs CUDA 12.4+ binaries. cu124 is the safe default;
-  # cu126 (PyTorch nightly path) is even better if you have a 555+ driver.
-  WHEEL="cu124"
+  # RTX 50-series (Blackwell, sm_120) needs cu128 wheels (PyTorch 2.7+).
+  # Older PyTorch cu124 builds only ship kernels up to sm_90 and will fail.
+  if echo "$GPU_NAME" | grep -qiE "RTX 50[0-9]{2}|Blackwell"; then
+    WHEEL="cu128"
+  else
+    WHEEL="cu124"
+  fi
   echo "  Using CUDA wheel: $WHEEL"
 else
   WHEEL="cpu"
@@ -38,10 +42,20 @@ fi
 # --- create venv ---
 if [[ ! -d "$VENV_DIR" ]]; then
   echo "  Creating venv at $VENV_DIR ..."
-  python3 -m venv "$VENV_DIR"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -m venv "$VENV_DIR"
+  else
+    python -m venv "$VENV_DIR"
+  fi
+fi
+# On Windows (Git Bash/MSYS) the venv layout is Scripts/, on Linux/Mac it's bin/
+if [[ -f "$VENV_DIR/Scripts/activate" ]]; then
+  ACTIVATE="$VENV_DIR/Scripts/activate"
+else
+  ACTIVATE="$VENV_DIR/bin/activate"
 fi
 # shellcheck disable=SC1090
-source "$VENV_DIR/bin/activate"
+source "$ACTIVATE"
 
 python -m pip install -q -U pip wheel
 
