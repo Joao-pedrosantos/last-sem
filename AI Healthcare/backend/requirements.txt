@@ -13,6 +13,7 @@ opencv-python-headless
 scipy
 scikit-learn
 pytest
+torchxrayvision
 # Notebook + training-side deps
 pandas
 matplotlib

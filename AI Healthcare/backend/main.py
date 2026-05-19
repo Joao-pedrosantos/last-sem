@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from cxr_pipeline import (
-    lung_roi_crop,
+    lung_focused_crop,
     make_val_transforms,
     read_dicom,
     to_rgb,
@@ -144,7 +144,7 @@ async def predict(
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Could not read image: {exc}") from exc
 
-    img_cropped = lung_roi_crop(img_gray)
+    img_cropped, lung_mask_crop = lung_focused_crop(img_gray)
     display_rgb = _display_image(img_cropped)
 
     img_rgb_model = to_rgb(img_cropped, size=INFERENCE_SIZE)
@@ -163,14 +163,24 @@ async def predict(
         )
         from pytorch_grad_cam.utils.image import show_cam_on_image
         from PIL import Image as PILImage
+        # Resize lung mask to display size — used to gate both the heatmap and
+        # the bbox so neither lights up outside the lung field.
+        mask_disp = np.array(
+            PILImage.fromarray(lung_mask_crop.astype(np.uint8) * 255)
+            .resize((DISPLAY_SIZE, DISPLAY_SIZE), PILImage.NEAREST)
+        ) > 127
         heatmap_disp = np.array(
             PILImage.fromarray((heatmap * 255).astype(np.uint8))
             .resize((DISPLAY_SIZE, DISPLAY_SIZE), PILImage.BILINEAR)
         ).astype(np.float32) / 255.0
+        heatmap_disp = heatmap_disp * mask_disp.astype(np.float32)
         img_float = display_rgb.astype(np.float32) / 255.0
         cam_image = show_cam_on_image(img_float, heatmap_disp, use_rgb=True)
         gradcam_b64 = _array_to_base64_png(cam_image)
-        bbox = bbox_from_heatmap_percentile(heatmap, percentile=90.0, blur_sigma=8.0, size=DISPLAY_SIZE)
+        bbox = bbox_from_heatmap_percentile(
+            heatmap, percentile=90.0, blur_sigma=8.0, size=DISPLAY_SIZE,
+            lung_mask=lung_mask_crop,
+        )
     except Exception:
         pass
 

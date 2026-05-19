@@ -23,10 +23,15 @@ def bbox_from_heatmap_percentile(
     percentile: float = 90.0,
     blur_sigma: float = 8.0,
     size: int = 512,
+    lung_mask: Optional[np.ndarray] = None,
 ) -> Optional[dict]:
     """
     Convert a (H, W) heatmap in [0, 1] to a bounding box dict in `size`-space.
     Returns None if the heatmap has no signal (all zeros).
+
+    If `lung_mask` is provided it is resized to `size`×`size` (nearest neighbour
+    to keep it binary) and multiplied into the heatmap *before* thresholding —
+    this stops the bbox from latching onto activations outside the lung field.
     """
     if heatmap.size == 0:
         return None
@@ -35,6 +40,16 @@ def bbox_from_heatmap_percentile(
         pil = Image.fromarray((np.clip(heatmap, 0, 1) * 255).astype(np.uint8))
         pil = pil.resize((size, size), Image.BILINEAR)
         heatmap = np.array(pil).astype(np.float32) / 255.0
+
+    if lung_mask is not None:
+        m = lung_mask
+        if m.shape != (size, size):
+            m_pil = Image.fromarray((m > 0).astype(np.uint8) * 255)
+            m_pil = m_pil.resize((size, size), Image.NEAREST)
+            m = (np.array(m_pil) > 127).astype(np.float32)
+        else:
+            m = (m > 0).astype(np.float32)
+        heatmap = heatmap * m
 
     if blur_sigma > 0:
         heatmap = gaussian_filter(heatmap, sigma=blur_sigma)
