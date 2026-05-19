@@ -4,11 +4,22 @@ import os
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
+
+# Pre-load torchxrayvision.baseline_models so its sys.path hack lands first,
+# then strip its pollution so our `model` import resolves to backend/model.py.
+# (Mirrors the dance in train_mt.py — same root cause: jfhealthcare ships a
+# `from model.utils import ...` that would otherwise hijack the name.)
+import sys as _sys
+import torchxrayvision.baseline_models  # noqa: F401
+_sys.modules.pop("model", None)
+_sys.path[:] = [p for p in _sys.path
+                if "jfhealthcare" not in p and "chexpert" not in p]
 
 from cxr_pipeline import (
     lung_focused_crop,
@@ -156,21 +167,31 @@ async def predict(
     gradcam_b64 = None
     bbox = None
     try:
-        heatmap = gradcam_pp_heatmap(
-            model_wrapper=model,
-            tensor=tensor,
-            target_layer=target_layer_for_efficientnet_b4(model),
-        )
-        from pytorch_grad_cam.utils.image import show_cam_on_image
+        # Multi-task model exposes the CAM directly via return_cam=True. This
+        # CAM was supervised against bbox masks during training, so it
+        # localizes well *without* a separate Grad-CAM pass. Falls back to
+        # Grad-CAM++ if the model doesn't accept return_cam (old checkpoint).
         from PIL import Image as PILImage
-        # Resize lung mask to display size — used to gate both the heatmap and
-        # the bbox so neither lights up outside the lung field.
+        from pytorch_grad_cam.utils.image import show_cam_on_image
+
+        try:
+            with torch.no_grad():
+                _, cam_tensor = model(tensor, return_cam=True)
+            heatmap = cam_tensor.sigmoid().squeeze().cpu().numpy()
+        except TypeError:
+            heatmap = gradcam_pp_heatmap(
+                model_wrapper=model, tensor=tensor,
+                target_layer=target_layer_for_efficientnet_b4(model),
+            )
+
+        # Resize lung mask to display size — gates both heatmap and bbox so
+        # neither lights up outside the lung field (zero-padded outer area).
         mask_disp = np.array(
             PILImage.fromarray(lung_mask_crop.astype(np.uint8) * 255)
             .resize((DISPLAY_SIZE, DISPLAY_SIZE), PILImage.NEAREST)
         ) > 127
         heatmap_disp = np.array(
-            PILImage.fromarray((heatmap * 255).astype(np.uint8))
+            PILImage.fromarray((np.clip(heatmap, 0, 1) * 255).astype(np.uint8))
             .resize((DISPLAY_SIZE, DISPLAY_SIZE), PILImage.BILINEAR)
         ).astype(np.float32) / 255.0
         heatmap_disp = heatmap_disp * mask_disp.astype(np.float32)

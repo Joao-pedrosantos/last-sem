@@ -1,0 +1,30 @@
+C:\Users\jpthe\Desktop\Insper\last-sem\AI Healthcare\venv\Lib\site-packages\albumentations\core\validation.py:114: UserWarning: ShiftScaleRotate is a special case of Affine transform. Please use Affine transform instead.
+  original_init(self, **validated_kwargs)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Device: cuda | torch 2.11.0+cu128
+GPU:    NVIDIA GeForce RTX 5070 Ti
+Total samples: 26,684 (positive rate 0.225)
+Train: 21,347 | Val: 2,668 | Test: 2,669
+
+=== Phase 1 — frozen backbone === (0.00M trainable params)
+  Epoch  1/5 | TL 0.3030 | VL 0.2125 | VAUC 0.5516 | LR 9.14e-05 | 1799s *
+  Epoch  2/5 | TL 0.2880 | VL 0.1798 | VAUC 0.5896 | LR 6.89e-05 | 113s *
+  Epoch  3/5 | TL 0.2760 | VL 0.1744 | VAUC 0.6233 | LR 4.11e-05 | 113s *
+  Epoch  4/5 | TL 0.2722 | VL 0.1613 | VAUC 0.6262 | LR 1.86e-05 | 113s *
+  Epoch  5/5 | TL 0.2680 | VL 0.1680 | VAUC 0.6407 | LR 1.00e-05 | 113s *
+
+=== Phase 2 — fine-tune last blocks === (13.11M trainable params)
+  Epoch  1/8 | TL 0.1284 | VL 0.0713 | VAUC 0.7594 | LR 9.66e-06 | 160s *
+  Epoch  2/8 | TL 0.0916 | VL 0.0611 | VAUC 0.7819 | LR 8.68e-06 | 138s *
+  Epoch  3/8 | TL 0.0782 | VL 0.0569 | VAUC 0.7973 | LR 7.22e-06 | 138s *
+  Epoch  4/8 | TL 0.0733 | VL 0.0530 | VAUC 0.8125 | LR 5.50e-06 | 138s *
+  Epoch  5/8 | TL 0.0678 | VL 0.0535 | VAUC 0.8167 | LR 3.78e-06 | 138s *
+  Epoch  6/8 | TL 0.0663 | VL 0.0507 | VAUC 0.8157 | LR 2.32e-06 | 138s
+  Epoch  7/8 | TL 0.0644 | VL 0.0494 | VAUC 0.8197 | LR 1.34e-06 | 138s *
+  Epoch  8/8 | TL 0.0628 | VL 0.0502 | VAUC 0.8166 | LR 1.00e-06 | 138s
+
+Final Val AUC:  0.8197
+Final Test AUC: 0.7952
+Clinical threshold (val Spec=0.95): 0.4706
+
+Saved final checkpoint: C:\Users\jpthe\Desktop\Insper\last-sem\AI Healthcare\outputs\pneumonia_model_final.pt

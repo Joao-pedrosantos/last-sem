@@ -1,0 +1,2 @@
+Model,Sens@Spec95,AUC-ROC,AUC 95% CI,F1-Score,Clinical Thresh
+EfficientNet-B4,0.8870,0.9729,"[0.9646, 0.9798]",0.9085,0.0942

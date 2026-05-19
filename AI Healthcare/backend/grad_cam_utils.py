@@ -79,8 +79,15 @@ def target_layer_for_efficientnet_b4(model_wrapper):
 def gradcam_pp_heatmap(model_wrapper, tensor, target_layer) -> np.ndarray:
     """
     Run GradCAM++ on a single-image batch tensor. Returns a (H, W) heatmap in [0, 1].
+
+    We pass `BinaryClassifierOutputTarget(1)` explicitly: the model emits a
+    single pneumonia logit, so the relevant gradient is w.r.t. that one
+    output. Letting pytorch-grad-cam auto-infer the target trips a bug for
+    single-logit models (`numpy.int64 not iterable`).
     """
     from pytorch_grad_cam import GradCAMPlusPlus
+    from pytorch_grad_cam.utils.model_targets import BinaryClassifierOutputTarget
     cam = GradCAMPlusPlus(model=model_wrapper, target_layers=[target_layer])
-    grayscale_cam = cam(input_tensor=tensor)
+    targets = [BinaryClassifierOutputTarget(1)]
+    grayscale_cam = cam(input_tensor=tensor, targets=targets)
     return grayscale_cam[0]

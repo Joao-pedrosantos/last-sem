@@ -3,3 +3,5 @@
 venv/
 __pycache__/
 rsna-pneumonia-detection-challenge/
+AI Healthcare/outputs/preproc_cache/
+AI Healthcare/outputs/preproc_cache_mt/

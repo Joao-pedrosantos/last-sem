@@ -1,0 +1,9 @@
+Device: cuda | torch 2.11.0+cu128
+GPU:    NVIDIA GeForce RTX 5070 Ti
+Patients: 26,684 | positives: 6,012
+Train: 21,347 | Val: 2,668 | Test: 2,669
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Warm-start loaded from best_model.pt (missing=0 unexpected=0)
+Trainable: 13.91M
+Epoch  1/10 | TL_cls 0.1255 TL_seg 0.4930 | VL_cls 0.0789 VL_seg 0.2581 | VAUC 0.8265 | LR 9.78e-06 | 978s *
+Epoch  2/10 | TL_cls 0.0768 TL_seg 0.2222 | VL_cls 0.0669 VL_seg 0.2036 | VAUC 0.8395 | LR 9.14e-06 | 161s *

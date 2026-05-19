@@ -1,0 +1,22 @@
+Device: cuda | torch 2.11.0+cu128
+GPU:    NVIDIA GeForce RTX 5070 Ti
+Patients: 26,684 | positives: 6,012
+Train: 21,347 | Val: 2,668 | Test: 2,669
+Warm-start loaded from best_model_mt.pt (missing=0 unexpected=0)
+Trainable: 13.91M
+Epoch  1/10 | TL_cls 0.0697 TL_seg 0.1856 | VL_cls 0.0654 VL_seg 0.1747 | VAUC 0.8559 | LR 9.78e-06 | 352s *
+Epoch  2/10 | TL_cls 0.0662 TL_seg 0.1727 | VL_cls 0.0646 VL_seg 0.1647 | VAUC 0.8652 | LR 9.14e-06 | 211s *
+Epoch  3/10 | TL_cls 0.0647 TL_seg 0.1671 | VL_cls 0.0633 VL_seg 0.1624 | VAUC 0.8696 | LR 8.15e-06 | 210s *
+Epoch  4/10 | TL_cls 0.0640 TL_seg 0.1633 | VL_cls 0.0607 VL_seg 0.1647 | VAUC 0.8719 | LR 6.89e-06 | 210s *
+Epoch  5/10 | TL_cls 0.0630 TL_seg 0.1619 | VL_cls 0.0630 VL_seg 0.1579 | VAUC 0.8734 | LR 5.50e-06 | 211s *
+Epoch  6/10 | TL_cls 0.0622 TL_seg 0.1598 | VL_cls 0.0545 VL_seg 0.1761 | VAUC 0.8747 | LR 4.11e-06 | 211s *
+Epoch  7/10 | TL_cls 0.0625 TL_seg 0.1600 | VL_cls 0.0570 VL_seg 0.1693 | VAUC 0.8752 | LR 2.85e-06 | 211s *
+Epoch  8/10 | TL_cls 0.0620 TL_seg 0.1590 | VL_cls 0.0649 VL_seg 0.1528 | VAUC 0.8748 | LR 1.86e-06 | 211s
+Epoch  9/10 | TL_cls 0.0620 TL_seg 0.1584 | VL_cls 0.0597 VL_seg 0.1626 | VAUC 0.8749 | LR 1.22e-06 | 212s
+Epoch 10/10 | TL_cls 0.0617 TL_seg 0.1589 | VL_cls 0.0571 VL_seg 0.1681 | VAUC 0.8757 | LR 1.00e-06 | 212s *
+
+Final Val AUC:  0.8757
+Final Test AUC: 0.8707
+Clinical threshold (val Spec=0.95): 0.2808
+
+Saved: C:\Users\jpthe\Desktop\Insper\last-sem\AI Healthcare\outputs\pneumonia_model_final.pt
